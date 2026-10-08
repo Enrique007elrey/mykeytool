@@ -216,3 +216,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Archivos generados por mykeytool
+*.myks
+*.csr
+*.crt
