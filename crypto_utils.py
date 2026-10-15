@@ -1,18 +1,15 @@
-"""Operaciones criptográficas: claves RSA, certificados y CSR."""
+from cryptography import x509 #importa el modulo para manejar certificados digitales y solicitudes de certificados
+from cryptography.hazmat.primitives import hashes, serialization # importa el modulo para manejar funciones hash y métodos para convertir las claves a formatos legibles
+from cryptography.hazmat.primitives.asymmetric import rsa # Importa el algoritmo RSA para crear las claves pública y privada
+from cryptography.x509.oid import NameOID # importa el modulo para manejar los identificadores de objetos que son utilizados en los certificados digitales
 
-from cryptography import x509
-from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.x509.oid import NameOID
-
-
-def generate_rsa_keypair(key_size=2048):
-    """Genera y devuelve una clave privada RSA."""
-    # 65537 es el exponente público estándar que usa todo el mundo.
-    # La clave pública va dentro de la privada: private_key.public_key()
-    return rsa.generate_private_key(public_exponent=65537, key_size=key_size)
+from errors import WrongPasswordError # Importa un error personalizado que se crea en errors.py
 
 
-# Campos del Distinguished Name: abreviatura -> identificador oficial (OID)
+def generate_rsa_keypair(key_size=2048): # Define una funcion para crear las claves RSA
+    return rsa.generate_private_key(public_exponent=65537, key_size=key_size) #creamos la clave privada. El 65537 es el numero recomendado por la seguridad para hacer los calculos matematicos rapidos y seguros
+
+
 DN_FIELDS = {
     "CN": NameOID.COMMON_NAME,               # Nombre y apellidos
     "OU": NameOID.ORGANIZATIONAL_UNIT_NAME,  # Unidad organizativa
@@ -24,7 +21,6 @@ DN_FIELDS = {
 
 
 def build_name(fields):
-    """Recibe {'CN':..., 'OU':..., 'O':..., 'L':..., 'ST':..., 'C':...} y devuelve un x509.Name."""
     if not fields.get("CN"):
         raise ValueError("El campo CN (nombre) es obligatorio.")
 
@@ -35,26 +31,27 @@ def build_name(fields):
     atributos = []
     for clave, oid in DN_FIELDS.items():
         valor = fields.get(clave, "").strip()
-        if valor:   # los campos vacíos no se añaden
+        if valor:
             atributos.append(x509.NameAttribute(oid, valor))
     return x509.Name(atributos)
 
 
 def encrypt_private_key(private_key, password):
-    """Devuelve la clave privada en PEM cifrada con la contraseña del alias."""
-    pass
+    pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.BestAvailableEncryption(password.encode()),
+    )
+    return pem.decode()
 
 
 def decrypt_private_key(pem, password):
-    """Devuelve la clave privada. Lanza WrongPasswordError si la contraseña es incorrecta."""
-    pass
-
-
-def create_self_signed_cert(private_key, name, days=90):
-    """Devuelve un certificado autofirmado en PEM."""
-    pass
+    try:
+        return serialization.load_pem_private_key(pem.encode(), password=password.encode())
+    except ValueError:
+        raise WrongPasswordError("Contraseña del alias incorrecta.")
 
 
 def create_csr(private_key, name):
-    """Devuelve la CSR en formato PEM (bytes)."""
-    pass
+    csr = x509.CertificateSigningRequestBuilder().subject_name(name).sign(private_key, hashes.SHA256())
+    return csr.public_bytes(serialization.Encoding.PEM)
