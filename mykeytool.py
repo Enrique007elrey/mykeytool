@@ -89,6 +89,28 @@ def cmd_certreq():
     print(f"CSR guardada en {filename}.")
 
 
+# ---------- Ampliaciones ----------
+
+def cmd_list():
+    """Muestra los alias que hay en el almacén."""
+    entries = keystore.load(getpass.getpass("Contraseña del almacén: "))
+    print(f"El almacén tiene {len(entries)} clave(s):")
+    for alias, entry in entries.items():
+        print(f"  - {alias}  (titular: {entry['dn']['CN']})")
+
+
+def cmd_delete():
+    """Borra un alias del almacén."""
+    store_pass = getpass.getpass("Contraseña del almacén: ")
+    entries = keystore.load(store_pass)
+    alias = input("Alias a borrar: ").strip().lower()
+    if alias not in entries:
+        raise AliasNotFoundError(f"El alias '{alias}' no existe.")
+    del entries[alias]
+    keystore.save(entries, store_pass)
+    print(f"Alias '{alias}' borrado.")
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="mykeytool.py",
@@ -100,6 +122,10 @@ def main():
                           help="Genera un par de claves RSA y lo guarda en el almacén.")
     comandos.add_argument("--certreq", action="store_true",
                           help="Genera una solicitud de certificado (CSR) en formato PEM.")
+    comandos.add_argument("--list", action="store_true",
+                          help="Muestra las claves guardadas en el almacén.")
+    comandos.add_argument("--delete", action="store_true",
+                          help="Borra una clave del almacén.")
     args = parser.parse_args()
 
     # Si algo sale mal mostramos un mensaje claro en vez de un error de Python
@@ -108,6 +134,10 @@ def main():
             cmd_genkeypair()
         elif args.certreq:
             cmd_certreq()
+        elif args.list:
+            cmd_list()
+        elif args.delete:
+            cmd_delete()
     except (KeytoolError, ValueError) as e:
         print(f"Error: {e}")
     except KeyboardInterrupt:
