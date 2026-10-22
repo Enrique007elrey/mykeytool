@@ -1,6 +1,10 @@
 """Simulador de Java keytool en Python - programa principal."""
 import argparse
 import getpass
+from datetime import datetime, timedelta, timezone
+
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
 
 import crypto_utils
 import keystore
@@ -111,6 +115,42 @@ def cmd_delete():
     print(f"Alias '{alias}' borrado.")
 
 
+def cmd_export():
+    """Exporta el certificado autofirmado de un alias a un archivo .crt."""
+    # 1. Abrir el almacén y buscar el alias
+    store_pass = getpass.getpass("Contraseña del almacén: ")
+    entries = keystore.load(store_pass)
+    alias = input("Alias a exportar: ").strip().lower()
+    if alias not in entries:
+        raise AliasNotFoundError(f"El alias '{alias}' no existe.")
+
+    # 2. Descifrar la clave privada con la contraseña del alias
+    key_pass = getpass.getpass("Contraseña del alias (Enter = la misma del almacén): ")
+    if key_pass == "":
+        key_pass = store_pass
+    private_key = crypto_utils.decrypt_private_key(entries[alias]["key"], key_pass)
+
+    # 3. Crear un certificado autofirmado válido durante 365 días
+    name = crypto_utils.build_name(entries[alias]["dn"])
+    now = datetime.now(timezone.utc)
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(name)
+        .issuer_name(name)  # autofirmado: emisor = titular
+        .public_key(private_key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now)
+        .not_valid_after(now + timedelta(days=365))
+        .sign(private_key, hashes.SHA256())
+    )
+
+    # 4. Guardar el certificado en PEM (sin la clave privada)
+    filename = f"{alias}.crt"
+    with open(filename, "wb") as f:
+        f.write(cert.public_bytes(serialization.Encoding.PEM))
+    print(f"Certificado guardado en {filename}.")
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="mykeytool.py",
@@ -126,6 +166,8 @@ def main():
                           help="Muestra las claves guardadas en el almacén.")
     comandos.add_argument("--delete", action="store_true",
                           help="Borra una clave del almacén.")
+    comandos.add_argument("--export", "--exportcert", action="store_true",
+                          help="Exporta el certificado de un alias a un archivo .crt.")
     args = parser.parse_args()
 
     # Si algo sale mal mostramos un mensaje claro en vez de un error de Python
@@ -138,6 +180,8 @@ def main():
             cmd_list()
         elif args.delete:
             cmd_delete()
+        elif args.export:
+            cmd_export()
     except (KeytoolError, ValueError) as e:
         print(f"Error: {e}")
     except KeyboardInterrupt:
