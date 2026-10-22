@@ -5,7 +5,7 @@ Programa en Python que imita la herramienta keytool de Java. Sirve para crear cl
 ## Integrantes
 
 - Enrique Rodrigo Flores
-- Pol [apellidos]
+- Pol Cañizares
 
 ## Instalación
 
@@ -40,6 +40,12 @@ Generar la CSR de una clave (crea el archivo alias.csr):
 
 ```
 python mykeytool.py --certreq
+```
+
+Exportar el certificado de una clave (crea alias.crt):
+
+```
+python mykeytool.py --export
 ```
 
 Ver las claves guardadas:
@@ -92,3 +98,4 @@ CSR guardada en enrique.csr.
 - Almacén que no existe o está dañado: muestra error: OK
 - País con más de 2 letras o nombre vacío: muestra error: OK
 - Listar y borrar claves con --list y --delete: OK
+- Exportar el certificado de un alias con --export: OK
