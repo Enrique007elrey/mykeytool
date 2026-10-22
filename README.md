@@ -68,14 +68,16 @@ El almacén no existe, se va a crear uno nuevo.
 Nueva contraseña del almacén:
 Repite la contraseña:
 Alias: enrique
-Datos del titular:
+Contraseña del alias (Enter = la misma del almacén):
+Datos del titular (Enter = None):
   Nombre y apellidos (CN): Enrique Rodrigo
   Unidad organizativa (OU): DAM
   Organización (O): Instituto
   Ciudad (L): Barcelona
   Provincia (ST): Barcelona
   País, 2 letras (C): ES
-Contraseña del alias (Enter = la misma del almacén):
+¿Es correcto CN=Enrique Rodrigo, OU=DAM, O=Instituto, L=Barcelona, ST=Barcelona, C=ES? (s/n): s
+Tamaño de la clave RSA en bits (2048 o 4096, Enter = 2048):
 Generando clave RSA de 2048 bits...
 Clave 'enrique' guardada en keystore.dat.
 
@@ -85,6 +87,15 @@ Alias: enrique
 Contraseña del alias (Enter = la misma del almacén):
 CSR guardada en enrique.csr.
 ```
+
+## Funcionamiento
+
+- Si un dato del titular se deja vacío (Enter), se guarda como None. Al final se enseña un resumen para revisarlo; si se contesta "n", se vuelven a pedir.
+- La contraseña del alias se pide antes que los datos del titular. Si se pulsa Enter, se usa la del almacén.
+- Se puede elegir una clave RSA de 2048 o 4096 bits.
+- Hay 3 intentos para escribir bien cada contraseña.
+- --list muestra cada alias con su titular, sus bits y la huella SHA-256 de su clave pública.
+- errors.py define un error propio para cada caso (contraseña incorrecta, alias repetido o inexistente, almacén inexistente o dañado, dato no válido).
 
 ## Pruebas realizadas
 
@@ -99,3 +110,8 @@ CSR guardada en enrique.csr.
 - País con más de 2 letras o nombre vacío: muestra error: OK
 - Listar y borrar claves con --list y --delete: OK
 - Exportar el certificado de un alias con --export: OK
+- Dejar todos los datos del titular vacíos: se guardan como None: OK
+- Contestar "n" en la revisión de los datos: se vuelven a pedir: OK
+- Elegir clave de 4096 bits (y rechazar 1024): OK
+- Fallar la contraseña 3 veces: acceso bloqueado; fallar 2 y acertar la 3ª: entra: OK
+- --list muestra la huella SHA-256 de cada alias: OK
