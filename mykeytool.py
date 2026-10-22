@@ -113,7 +113,7 @@ def ask_dn():
         # Revisión: enseñamos lo que ha escrito y preguntamos si está bien
         resumen = ", ".join(f"{clave}={valor}" for clave, valor in dn.items())
         respuesta = input(f"¿Es correcto {resumen}? (s/n): ").strip().lower()
-        if respuesta in ("s", "si", "sí"):
+        if respuesta in ("s", "si", "sí", "yes", "y"):
             return dn
         print("Vale, vuelve a escribir los datos.\n")
 
