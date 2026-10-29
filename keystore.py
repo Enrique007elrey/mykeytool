@@ -3,8 +3,11 @@
 El almacén es un diccionario de Python:
     { "alias": {"dn": {...datos del titular...}, "key": "clave privada cifrada"} }
 
-En el archivo se guarda así:
-    [ salt (16 bytes) ][ diccionario en JSON cifrado con Fernet ]
+En el archivo se guarda así, todo en binario (no se ve ningún texto):
+    [ salt (16 bytes) ][ diccionario en JSON cifrado con Fernet, en bytes ]
+
+Fernet entrega el resultado escrito en Base64. Para que en el archivo no se
+vea nada legible, quitamos ese Base64 al guardar y lo volvemos a poner al leer.
 """
 
 import base64
@@ -41,7 +44,8 @@ def load(password):
         raise KeystoreCorruptError("El almacén está dañado.")
 
     salt = data[:16]        # los primeros 16 bytes son el salt
-    encrypted = data[16:]   # el resto son los datos cifrados
+    # El resto son los datos cifrados en binario; Fernet los necesita en Base64
+    encrypted = base64.urlsafe_b64encode(data[16:])
 
     try:
         decrypted = Fernet(password_to_key(password, salt)).decrypt(encrypted)
@@ -58,6 +62,7 @@ def load(password):
 def save(entries, password):
     """Cifra el diccionario y lo guarda en el archivo."""
     salt = os.urandom(16)   # salt aleatorio nuevo cada vez
-    encrypted = Fernet(password_to_key(password, salt)).encrypt(json.dumps(entries).encode())
+    token = Fernet(password_to_key(password, salt)).encrypt(json.dumps(entries).encode())
+    encrypted = base64.urlsafe_b64decode(token)   # quitamos el Base64: solo bytes cifrados
     with open(KEYSTORE_FILE, "wb") as f:
         f.write(salt + encrypted)
