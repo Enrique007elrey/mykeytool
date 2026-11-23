@@ -29,17 +29,16 @@ def password_to_key(password, salt):
     return base64.urlsafe_b64encode(kdf.derive(password.encode()))
 
 
-def exists(path=KEYSTORE_FILE):
-    return os.path.isfile(path)
+def exists():
+    return os.path.isfile(KEYSTORE_FILE)
 
 
-def load(password, path=KEYSTORE_FILE):
-    """Abre el almacén y devuelve el diccionario con las entradas.
-    Por defecto abre keystore.dat; con path se puede abrir otro (para -importkeystore)."""
-    if not exists(path):
+def load(password):
+    """Abre el almacén y devuelve el diccionario con las entradas."""
+    if not exists():
         raise KeystoreNotFoundError("El almacén no existe. Créalo con --genkeypair.")
 
-    with open(path, "rb") as f:
+    with open(KEYSTORE_FILE, "rb") as f:
         data = f.read()
     if len(data) < 17:
         raise KeystoreCorruptError("El almacén está dañado.")
